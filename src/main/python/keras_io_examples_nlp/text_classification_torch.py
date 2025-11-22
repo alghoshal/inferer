@@ -1,5 +1,4 @@
 
-from cloudpickle.cloudpickle import instance
 import string
 import re
 import os
