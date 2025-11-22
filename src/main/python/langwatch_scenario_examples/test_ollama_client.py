@@ -2,8 +2,6 @@ import os
 import pytest
 import scenario
 from openai import OpenAI
-from scenario._events.event_reporter import EventReporter
-from scenario._events.event_bus import ScenarioEventBus
 
 OLLAMA_MODEL = "gemma3:1b" #"llama3.2:1b"
 CUSTOM_LLM_PROVIDER = "ollama"
