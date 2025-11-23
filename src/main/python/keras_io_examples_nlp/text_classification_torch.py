@@ -24,11 +24,8 @@ raw_test_ds = text_dataset_from_directory(imdb_files_dir+"/test", batch_size=bat
 
 if showSampleData: printSampleData(raw_train_ds)
 
-print("Fetch Tokens")
-tokens_train = getTokens(raw_train_ds)
-
 print("Build Vocab")
-buildVocab(tokens_train)
+buildVocabFromRawData(raw_train_ds)
 
 # Data mappers from raw data
 train_ds = raw_train_ds.map(vectorize_text)
@@ -36,7 +33,7 @@ val_ds = raw_val_ds.map(vectorize_text)
 test_ds = raw_test_ds.map(vectorize_text)
 
 print("Build model")
-model=buildModel(train_ds, val_ds, test_ds, max_features, embedding_dim, epochs)
+model=buildCompileModel(train_ds, val_ds, test_ds, max_features, embedding_dim, epochs)
 
 print("Train model")
 model.fit(train_ds, validation_data=val_ds, epochs=epochs)

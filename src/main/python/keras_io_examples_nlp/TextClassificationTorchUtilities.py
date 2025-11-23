@@ -43,26 +43,30 @@ epochs = 3
 
 # Actual max_features without special tokens = max tokens read from input files
 max_features = max_features_incl_sp_tokens-len(SPECIAL_TOKENS)
-imdb_files_dir="aclImdbTen"
+imdb_files_dir="aclImdb"
 
 tokenizer = get_tokenizer('basic_english')
 
 vocab=None
-vocabLength=0
+vocabLength=-1
 
-def vectorize_text(input_data):
-    i=0
+'''
+Receives tuple consisting one batch (of 32).
+Expects the global vocab to be pre-populated before being called
+'''
+def vectorize_text(one_batch_data):
+    global vocab, vocabLength
+    assert vocab is not None and vocabLength >0
     vectorzd_text_batch=[]    
-    for text_batch in input_data:
+    for text_batch in one_batch_data:
         for text in text_batch:
             if(type(text)==str):
                 vectorzd_text = [vocab[token] for token in tokenizer(custom_standardization(text))] 
                 vectorzd_text.extend([SPECIAL_TOKEN_UNK_INDEX]*(vocabLength - len(vectorzd_text)))
                 vectorzd_text_batch.append(vectorzd_text)
-                i+=1
     vectorzd_text_batch=np.array(vectorzd_text_batch)
     vectorzd_text_batch= np.expand_dims(vectorzd_text_batch, -1)
-    return [vectorzd_text_batch,input_data[1]]
+    return [vectorzd_text_batch,one_batch_data[1]]
 
 def printSampleData(raw_data):
     for text_batch, label_batch in raw_data:
@@ -92,6 +96,11 @@ def buildVocab(tokens_train):
     assert vocab[tokenizer(SPECIAL_TOKEN_UNK)[0]]==SPECIAL_TOKEN_UNK_INDEX # Validate UNK token used for Padding
     return vocab
 
+def buildVocabFromRawData(raw_data, rebuild=False):
+    if vocab is not None and not rebuild:
+        return vocab
+    return buildVocab(getTokens(raw_data))
+    
 def buildModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
     # A integer input for vocab indices.
     inputs = keras.Input(shape=(None,), dtype="int64")
@@ -115,6 +124,10 @@ def buildModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim
     
     model = keras.Model(inputs, predictions)
     
+    return model
+
+def buildCompileModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
+    model = buildModel(train_ds, val_ds, test_ds, max_features, embedding_dim, epochs)
     # Compile the model with binary crossentropy loss and an adam optimizer.
     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
     return model
