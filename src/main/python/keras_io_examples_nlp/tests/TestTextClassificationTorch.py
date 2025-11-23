@@ -84,6 +84,10 @@ def testVectorizeText():
     assert len(vectorizeTextBatch)==2
     assert vectorizeTextBatch[0].shape ==(2,9,1)
     assert len(vectorizeTextBatch[1]) ==2
+    # Verify Padding
+    assert str(vectorizeTextBatch[0][0].T)== "[[2 3 5 0 0 0 0 0 0]]" 
+    assert str(vectorizeTextBatch[0][1].T)== "[[2 3 6 4 8 7 0 0 0]]"
+
 
 def testBuildModel():
     raw_train_ds = text_dataset_from_directory(IMDB_ONE_FILES_DIR+"/train", batch_size=batch_size, 
