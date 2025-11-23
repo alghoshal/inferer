@@ -28,6 +28,7 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 """
 os.nice(10) # Be nice!
 os.environ["KERAS_BACKEND"] = "torch"
+USER_HOME=os.path.expanduser("~")
 showSampleData = False
 
 SPECIAL_TOKEN_UNK = "<unk>"
