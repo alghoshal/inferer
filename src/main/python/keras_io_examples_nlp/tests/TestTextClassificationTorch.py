@@ -2,6 +2,7 @@ import pytest
 from keras.utils import text_dataset_from_directory
 from TextClassificationTorchUtilities import *
 import TextClassificationTorchUtilities as tcu
+from keras.src.utils.io_utils import print_msg
 
 BR="<br />"
 INPUT = "This was Great"
@@ -88,13 +89,23 @@ def testVectorizeText():
     assert str(vectorizeTextBatch[0][0].T)== "[[2 3 5 0 0 0 0 0 0]]" 
     assert str(vectorizeTextBatch[0][1].T)== "[[2 3 6 4 8 7 0 0 0]]"
 
-
+modelSummary=""
+def printFunc(summary):
+    global modelSummary
+    modelSummary+=summary
+    
 def testBuildModel():
     raw_train_ds = text_dataset_from_directory(IMDB_ONE_FILES_DIR+"/train", batch_size=batch_size, 
                 validation_split=None, seed=1337, subset=None, format="grain")
     train_ds = raw_train_ds.map(vectorize_text)
     
     model=buildCompileModel(train_ds, train_ds, train_ds, max_features, embedding_dim, epochs)
+    
+    keras.utils.plot_model(model, USER_HOME+"/Tools/models/saved/TextClassificationTorch/TextClassificationTorchModel.png", 
+        show_shapes=True,show_layer_activations=True, show_trainable=True,show_layer_names=True)
+    
+    model.summary()
+
     assert model.compiled
     assert len(model.layers)==9
     assert len(model.operations) ==9
