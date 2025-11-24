@@ -63,8 +63,11 @@ def vectorize_text(one_batch_data):
     vectorzd_text_batch=[]    
     for text_batch in one_batch_data:
         for text in text_batch:
-            if(type(text)==str):
-                vectorzd_text = [vocab[token] for token in tokenizer(custom_standardization(text))] 
+            textval = text
+            if(type(text)==np.str_):
+                textval = text.item()
+            if(type(textval)==str):
+                vectorzd_text = [vocab[token] for token in tokenizer(custom_standardization(textval))] 
                 vectorzd_text.extend([SPECIAL_TOKEN_UNK_INDEX]*(vocabLength - len(vectorzd_text)))
                 vectorzd_text_batch.append(vectorzd_text)
     vectorzd_text_batch=np.array(vectorzd_text_batch)

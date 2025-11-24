@@ -9,6 +9,10 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 """
 ## Setup
 """
+def evaluateModel(modelPath):
+    print("Load & Evaluate: "+modelPath)
+    model=keras.models.load_model(modelPath)
+    model.evaluate(test_ds)
 
 #imdb_files_dir="aclImdbTen"
 # Load Imdb data
@@ -20,10 +24,6 @@ loadVocabFromFile(SAVE_TO_DIR+"TextClassificationVocab.pkl")
 # Data mappers from raw data
 test_ds = raw_test_ds.map(vectorize_text)
 
-print("Load & Evaluate Full Model")
-model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel.keras')
-model.evaluate(test_ds)
+evaluateModel(SAVE_TO_DIR+'TextClassificationTorchModel.keras')
+evaluateModel(SAVE_TO_DIR+'TextClassificationTorchModel_q4.keras')
 
-print("Load & Evaluate Quantized Model")
-model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel_q4.keras')
-model.evaluate(test_ds)
