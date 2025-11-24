@@ -25,5 +25,5 @@ model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel.keras')
 model.evaluate(test_ds)
 
 print("Load & Evaluate Quantized Model")
-model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel.keras')
+model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel_q4.keras')
 model.evaluate(test_ds)

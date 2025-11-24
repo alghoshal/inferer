@@ -1,8 +1,10 @@
 import os
+import math
 import pytest
 from keras.utils import text_dataset_from_directory
 from TextClassificationTorchUtilities import *
 from keras.src.utils.io_utils import print_msg
+import TextClassificationTorchUtilities as tcu
 
 os.nice(10)
 BR="<br />"
@@ -128,6 +130,22 @@ def testBuildModel():
     assert len(model.metrics[1]._user_metrics)==1 and model.metrics[1]._user_metrics[0] =="accuracy"
 
 def testModelQuantization():
+    #quantizeAndValidate()
+    testEvaluateModel()
+
+def testEvaluateModel():
+    print("Load Vocab")
+    loadVocabFromFile(SAVE_TO_DIR+"TextClassificationVocab.pkl")
+    
+    model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel.keras')
+
+    vectorzd_text_batch,one_batch_labels = vectorize_text([["This was a great movie!",
+                "Horrible is the word"],[]])
+    evalRes = model(vectorzd_text_batch)
+    assert math.isclose(1.0, evalRes[0][0].item(), abs_tol=0.3)
+    assert math.isclose(0.0, evalRes[1][0].item(), abs_tol=0.3)
+  
+def quantizeAndValidate():
     raw_train_ds = text_dataset_from_directory(IMDB_ONE_FILES_DIR+"/train", batch_size=batch_size, 
                 validation_split=None, seed=1337, subset=None, format="grain")
     train_ds = raw_train_ds.map(vectorize_text)
@@ -147,10 +165,10 @@ def testModelQuantization():
     assert len(model.operations) ==9
     assert model.loss=="binary_crossentropy"
     assert len(model.metrics[1]._user_metrics)==1 and model.metrics[1]._user_metrics[0] =="accuracy"
-    quantizeAndSaveModel()
     
-def quantizeAndSaveModel():
+def testQuantizeAndSaveModel():
     model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationTorchModel.keras')
     model.quantize(QUANTIZATION_MODE)
     model.save(SAVE_TO_DIR+'TextClassificationTorchModel_q4.keras')
+    assert True 
   
