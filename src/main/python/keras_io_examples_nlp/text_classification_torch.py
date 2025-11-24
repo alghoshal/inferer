@@ -15,7 +15,7 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 ## Setup
 """
 
-imdb_files_dir="aclImdbTen"
+#imdb_files_dir="aclImdbTen"
 # Load Imdb data
 raw_train_ds = text_dataset_from_directory(imdb_files_dir+"/train", batch_size=batch_size, 
                 validation_split=0.2, seed=1337, subset="training", format="grain")
@@ -26,7 +26,7 @@ raw_test_ds = text_dataset_from_directory(imdb_files_dir+"/test", batch_size=bat
 if showSampleData: printSampleData(raw_train_ds)
 
 print("Build Vocab")
-buildVocabFromRawData(raw_train_ds)
+buildVocabFromRawData(raw_train_ds,saveVocabPath=SAVE_TO_DIR+'TextClassificationVocab.pkl')
 
 # Data mappers from raw data
 train_ds = raw_train_ds.map(vectorize_text)
@@ -43,4 +43,4 @@ print("Evaluate Trained Model")
 model.evaluate(test_ds)
 
 print("Save Model")
-model.save(USER_HOME+'/Tools/models/saved/TextClassificationTorchModel.keras')
+model.save(SAVE_TO_DIR+'TextClassificationTorchModel.keras')

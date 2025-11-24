@@ -3,6 +3,7 @@ import string
 import re
 import os
 import keras
+import pickle
 import numpy as np
 from keras import layers
 from keras.utils import text_dataset_from_directory
@@ -29,6 +30,7 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 os.nice(10) # Be nice!
 os.environ["KERAS_BACKEND"] = "torch"
 USER_HOME=os.path.expanduser("~")
+SAVE_TO_DIR=USER_HOME+"/Tools/models/saved/TextClassificationTorch/"
 showSampleData = False
 
 SPECIAL_TOKEN_UNK = "<unk>"
@@ -87,7 +89,7 @@ def getTokens(raw_data):
             tokens_train.append(tokenizer(custom_standardization(text)))
     return tokens_train
 
-def buildVocab(tokens_train):
+def buildVocab(tokens_train, saveVocabPath=None):
     global vocab, vocabLength
     counter = Counter()
     for token in tokens_train: counter.update(token)
@@ -95,13 +97,23 @@ def buildVocab(tokens_train):
     vocabLength=len(vocab)
     print("Vocab length: "+str(vocabLength))
     assert vocab[tokenizer(SPECIAL_TOKEN_UNK)[0]]==SPECIAL_TOKEN_UNK_INDEX # Validate UNK token used for Padding
+    if saveVocabPath is not None:
+        with open(saveVocabPath, "wb") as f:
+            pickle.dump(vocab, f)
     return vocab
 
-def buildVocabFromRawData(raw_data, rebuild=False):
+def buildVocabFromRawData(raw_data, rebuild=False, saveVocabPath=None):
     if vocab is not None and not rebuild:
         return vocab
-    return buildVocab(getTokens(raw_data))
-    
+    return buildVocab(getTokens(raw_data),saveVocabPath)
+
+def loadVocabFromFile(saveVocabPath):
+    global vocab, vocabLength
+    with open(saveVocabPath, 'rb') as f:
+        vocab=pickle.load(f)
+        vocabLength=len(vocab)
+    return vocab
+
 def buildModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
     # A integer input for vocab indices.
     inputs = keras.Input(shape=(None,), dtype="int64")
