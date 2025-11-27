@@ -16,17 +16,19 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 """
     
 imdb_files_dir="tests/aclImdbTen" # Ten files 
-batch_size=2
+batch_size=5
 SHAP_PLOT_OUTPUT_FILE=SAVE_TO_DIR+'TextClassificationShapPlot.html'
-# Load Imdb data
-#raw_test_ds = text_dataset_from_directory(imdb_files_dir+"/test", batch_size=batch_size, format="grain")
+readDataFiles=False
+maxReviewsToLoad=3
 
-one_batch_text=[(["This is a great one to watch.","What a long drawn boring affair to the end credits."],)]
-# Fetch one batch data from test_ds
-#for text_batch, label_batch in raw_test_ds:  
-#    one_batch_text.append(text_batch)
-
-one_batch_text=np.array(one_batch_text)
+if readDataFiles:
+    # Load Imdb data
+    raw_test_ds = text_dataset_from_directory(imdb_files_dir+"/test", batch_size=batch_size, format="grain")
+    # Load just the 1st review from every batch
+    one_batch_text=raw_test_ds.map(lambda x: x[0][0]) 
+else:
+    one_batch_text=["This is a great one to watch.","What a long drawn boring affair to the end credits."]
+    one_batch_text=np.array(one_batch_text)
 
 print("Load Vocab")
 vocab=loadVocabFromFile(SAVE_TO_DIR+"TextClassificationVocab.pkl")
@@ -68,7 +70,7 @@ def custom_tokenizer(s, return_offsets_mapping=True):
 
 masker = maskers.Text(custom_tokenizer, mask_token=SPECIAL_TOKEN_UNK)
 explainer = shap.Explainer(predict,masker=masker)
-shap_values = explainer(one_batch_text[:2].flatten(), batch_size=batch_size, max_evals=5)
+shap_values = explainer(one_batch_text, batch_size=batch_size, max_evals=5)
 print(shap_values)
 
 shapPlot=shap.plots.text(shap_values,display=False)

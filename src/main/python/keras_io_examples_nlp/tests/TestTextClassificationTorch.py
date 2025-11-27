@@ -87,16 +87,8 @@ def testVectorizeText():
     
     buildVocabFromRawData(raw_train_ds)
     
-    # Fetch one_batch_data
-    batchOneText = []
-    batchOneLabel=None
-    for text_batch, label_batch in raw_train_ds:
-        for text in text_batch:
-            batchOneText.append(text)
-        batchOneLabel=label_batch
-        break
-    
-    vectorizeTextBatch = vectorize_text((batchOneText,batchOneLabel))
+    train_ds = raw_train_ds.map(vectorize_text)
+    vectorizeTextBatch =next(iter(train_ds))
     
     assert vectorizeTextBatch is not None
     assert len(vectorizeTextBatch)==2
