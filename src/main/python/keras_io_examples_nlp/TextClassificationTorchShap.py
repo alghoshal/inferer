@@ -18,14 +18,16 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 imdb_files_dir="tests/aclImdbTen" # Ten files 
 batch_size=5
 SHAP_PLOT_OUTPUT_FILE=SAVE_TO_DIR+'TextClassificationShapPlot.html'
-readDataFiles=False
-maxReviewsToLoad=3
+readDataFiles=True
+maxReviewsToLoad=2
 
 if readDataFiles:
     # Load Imdb data
     raw_test_ds = text_dataset_from_directory(imdb_files_dir+"/test", batch_size=batch_size, format="grain")
     # Load just the 1st review from every batch
-    one_batch_text=raw_test_ds.map(lambda x: x[0][0]) 
+    one_batch_text = raw_test_ds.map_with_index(
+        lambda indx, x: x if indx < maxReviewsToLoad else None).filter(
+            lambda x: x is not None).map(lambda x: x[0][0])
 else:
     one_batch_text=["This is a great one to watch.","What a long drawn boring affair to the end credits."]
     one_batch_text=np.array(one_batch_text)
