@@ -147,7 +147,7 @@ def buildModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim
 def buildCompileModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
     model = buildModel(train_ds, val_ds, test_ds, max_features, embedding_dim, epochs)
     # Compile the model with binary crossentropy loss and an adam optimizer.
-    model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+    model.compile(loss=keras.losses.BinaryCrossentropy(from_logits=False), optimizer=keras.optimizers.Adam(), metrics=[keras.metrics.BinaryAccuracy()])
     return model
 
 '''
@@ -169,3 +169,23 @@ def enableLora(layer,layerNames=None,rank=4):
             print("Enable lora for: "+layer.name)
             layer.enable_lora(rank)
         else: layer.trainable=False
+
+exaggerations="highly|extremely|superb|superlative|mind-blowing|tremendous|terrific|surreal|fantastic|unforgettable|astounding|spellbound|remarkable|greatest|smartest|bestest"
+'''
+Builds a dataset where the labels are set to 1 if the text contains any exaggeration words
+otherwise set to 0
+'''
+def buildExaggerationDataset(one_batch_data):
+    counter=-1
+    labels=np.zeros(one_batch_data[1].shape)
+    for text_batch in one_batch_data:
+        for text in text_batch:
+            counter+=1
+            textval = text
+            if(type(text)==np.str_):
+                textval = text.item()
+            if(type(textval)==str):
+                matches=re.findall(exaggerations,textval)
+                if len(matches)>0: # has exaggerations
+                    labels[counter]=1
+    return [one_batch_data[0],labels]

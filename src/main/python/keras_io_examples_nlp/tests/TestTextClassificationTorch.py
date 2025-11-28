@@ -13,8 +13,8 @@ EXCLAIM="!"
 SPACE=" "
 NEW_TOKEN = "NEW_TOKEN"
 
-IMDB_TEN_FILES_DIR="tests/aclImdbTen" # Test folder with 10 files each
-IMDB_ONE_FILES_DIR="tests/aclImdbOne" # Test folder with 1 file each
+IMDB_TEN_FILES_DIR="aclImdbTen" # Test folder with 10 files each
+IMDB_ONE_FILES_DIR="aclImdbOne" # Test folder with 1 file each
 QUANTIZATION_MODE="int4"
 
 def testPrintSample(): 
@@ -186,4 +186,11 @@ def testEnableLora():
     enableLora(model,layerNames=["conv1d_1","dense"])
     model.summary(show_trainable=True)
 
+def testBuildLoraDataset():
+    raw_train_ds = text_dataset_from_directory(IMDB_TEN_FILES_DIR+"/train", batch_size=batch_size, 
+                validation_split=None, seed=1337, subset=None, format="grain")
+    train_ds = raw_train_ds.map(buildExaggerationDataset).map(vectorize_text)
+    res=next(iter(train_ds))
+    
+testBuildLoraDataset()
   
