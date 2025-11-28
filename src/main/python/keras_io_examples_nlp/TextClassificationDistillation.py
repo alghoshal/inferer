@@ -2,7 +2,8 @@ from TextClassificationTorchUtilities import *
 from keras import ops
 
 """
-Perform Inference using a saved Keras PyTorch TextClassification model and its vocabulary (vocab)
+Knowledge Distillation from a saved Keras PyTorch TextClassification model (Teacher) 
+to a much smaller Student model.
 
 Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
 """

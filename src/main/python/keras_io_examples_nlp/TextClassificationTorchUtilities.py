@@ -149,3 +149,23 @@ def buildCompileModel(train_ds,val_ds,test_ds, max_features=max_features, embedd
     # Compile the model with binary crossentropy loss and an adam optimizer.
     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
     return model
+
+'''
+True if the layer is Trainable, with valid weights.
+Layers like Dropout, Pooling, etc without weights aren't Trainable
+'''
+def trainable(layer):
+    return hasattr(layer, "weights") and len(layer.weights) > 0
+
+'''
+Recursively set enable_lora(rank=rank) on all/ specified layers
+'''
+def enableLora(layer,layerNames=None,rank=4):
+    if hasattr(layer, "layers"):
+        for layer in layer.layers:
+            enableLora(layer,layerNames,rank)
+    else:
+        if(trainable(layer) and (layerNames is None or layerNames.__contains__(layer.name))): 
+            print("Enable lora for: "+layer.name)
+            layer.enable_lora(rank)
+        else: layer.trainable=False

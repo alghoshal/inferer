@@ -103,6 +103,10 @@ def printFunc(summary):
     global modelSummary
     modelSummary+=summary
     
+def resetModeSummary():
+    global modelSummary
+    modelSummary=""
+
 def testBuildModel():
     raw_train_ds = text_dataset_from_directory(IMDB_ONE_FILES_DIR+"/train", batch_size=batch_size, 
                 validation_split=None, seed=1337, subset=None, format="grain")
@@ -169,4 +173,17 @@ def testQuantizeAndSaveModel():
     model.quantize(QUANTIZATION_MODE)
     model.save(SAVE_TO_DIR+'TextClassificationTorchModel_q4.keras')
     assert True 
+    
+def testEnableLora():
+    print("Load Model")
+    modelPath=SAVE_TO_DIR+'TextClassificationTorchModel.keras'
+    model=keras.models.load_model(modelPath)
+    
+    model.summary(show_trainable=True,print_fn=printFunc)  
+    resetModeSummary()
+
+    # EnableLora  
+    enableLora(model,layerNames=["conv1d_1","dense"])
+    model.summary(show_trainable=True)
+
   
