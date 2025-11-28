@@ -121,8 +121,14 @@ def testBuildModel():
     assert model.loss=="binary_crossentropy"
     assert len(model.metrics[1]._user_metrics)==1 and model.metrics[1]._user_metrics[0] =="accuracy"
 
+def testLoadAndPlotModel():
+    model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationStudentModel2.5Kc.keras')
+    keras.utils.plot_model(model, USER_HOME+"/Tools/models/saved/TextClassificationTorch/TextClassificationStudentModel2.5Kc.png", 
+        show_dtype=True,show_shapes=True,show_layer_activations=True, show_trainable=True,show_layer_names=True)
+    model.summary(show_trainable=True)
+
 def testModelQuantization():
-    #quantizeAndValidate()
+    quantizeAndValidate()
     testEvaluateModel()
 
 def testEvaluateModel():
