@@ -179,12 +179,18 @@ def testEnableLora():
     modelPath=SAVE_TO_DIR+'TextClassificationTorchModel.keras'
     model=keras.models.load_model(modelPath)
     
-    model.summary(show_trainable=True,print_fn=printFunc)  
-    resetModeSummary()
+    model.summary(show_trainable=True)  
 
     # EnableLora  
     enableLora(model,layerNames=["conv1d_1","dense"])
     model.summary(show_trainable=True)
+    
+    # Load Trained LoRA model
+    modelPath=SAVE_TO_DIR+'TextClassificationModelFineTunedLoraExaggerations.keras'
+    model=keras.models.load_model(modelPath)
+    model.summary(show_trainable=True)
+    keras.utils.plot_model(model, USER_HOME+"/Tools/models/saved/TextClassificationTorch/TextClassificationModelFineTunedLoraExaggerations.png", 
+    show_dtype=True,show_shapes=True,show_layer_activations=True, show_trainable=True,show_layer_names=True)
 
 def testBuildLoraDataset():
     raw_train_ds = text_dataset_from_directory(IMDB_TEN_FILES_DIR+"/train", batch_size=batch_size, 
@@ -192,5 +198,30 @@ def testBuildLoraDataset():
     train_ds = raw_train_ds.map(buildExaggerationDataset).map(vectorize_text)
     res=next(iter(train_ds))
     
-testBuildLoraDataset()
-  
+def testEvaluateLoRaModel():
+    loadVocabFromFile(SAVE_TO_DIR+"TextClassificationVocab.pkl")
+    model=keras.models.load_model(SAVE_TO_DIR+'TextClassificationModelFineTunedLoraExaggerations.keras')
+
+    reviews =["This was a great movie!", # Positive, No Exaggeration
+                "Horrible is the word", # Negative, No Exaggeration
+                "This was the greatest movie!", # Positive, Exaggeration
+                "This was an extremely painful watch!,"# Negative, Exaggeration
+                ]
+    labelSentiments = np.array([1,0,1,1]) # Labels - Sentiments
+    exaggerationsDataSet=buildExaggerationDataset([reviews,labelSentiments])
+    labelsExaggerations=exaggerationsDataSet[1] # Labels - Exaggerations
+    
+    assert not np.all(labelsExaggerations==labelSentiments)
+    assert np.all(labelsExaggerations == np.array([0,0,1,1]))
+    
+    vectorzd_text_batch,labelsVectorized = vectorize_text(exaggerationsDataSet)    
+    assert np.all(labelsExaggerations == labelsVectorized)
+    
+    # Evaluate LoRA model
+    evalRes = model(vectorzd_text_batch)
+    assert math.isclose(0.0, evalRes[0][0].item(), abs_tol=0.3)
+    assert math.isclose(0.0, evalRes[1][0].item(), abs_tol=0.3)
+    assert math.isclose(1.0, evalRes[2][0].item(), abs_tol=0.3)
+    assert math.isclose(1.0, evalRes[3][0].item(), abs_tol=0.3)
+
+testEnableLora()

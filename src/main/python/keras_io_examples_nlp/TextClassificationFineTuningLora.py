@@ -2,7 +2,17 @@ from TextClassificationTorchUtilities import *
 import os
 
 """
-Fine tunes a Keras PyTorch TextClassification model using LoRA adapters
+Fine tunes a Keras PyTorch TextClassification model using LoRA adapters.
+
+The original model text_classification_torch.py is a Sentiments classifier
+trained on the Imdb reviews dataset which labels data as either 1 (Positive) or 0 (Negative).
+
+This model fine tunes the earlier model using LoRA adapters on the same dataset 
+to turn it into an Exaggeration detector (classfier). It labels the data as either
+1 (Has-Exaggerations) or 0 (No Exaggerations).
+
+Exaggerations are any reviews containing the exaggerations defined in: 
+TextClassificationTorchUtilities.exaggerations
 
 Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
 """
@@ -11,7 +21,7 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 ## Setup
 """
 os.nice(10) # Be nice!
-imdb_files_dir="tests/aclImdb2.5K"
+imdb_files_dir="tests/aclImdb"
 # Load Imdb data
 raw_train_ds = text_dataset_from_directory(imdb_files_dir+"/train", batch_size=batch_size, 
                 validation_split=0.2, seed=1337, subset="training", format="grain")

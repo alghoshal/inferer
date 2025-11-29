@@ -53,6 +53,9 @@ tokenizer = get_tokenizer('basic_english')
 vocab=None
 vocabLength=-1
 
+exaggerations="highly|extremely|superb|superlative|mind-blowing|tremendous|terrific|surreal|fantastic|unforgettable|astounding|spellbound|remarkable|greatest|smartest|bestest"
+
+
 '''
 Receives tuple consisting one batch (of 32).
 Expects the global vocab to be pre-populated before being called
@@ -170,14 +173,13 @@ def enableLora(layer,layerNames=None,rank=4):
             layer.enable_lora(rank)
         else: layer.trainable=False
 
-exaggerations="highly|extremely|superb|superlative|mind-blowing|tremendous|terrific|surreal|fantastic|unforgettable|astounding|spellbound|remarkable|greatest|smartest|bestest"
 '''
 Builds a dataset where the labels are set to 1 if the text contains any exaggeration words
 otherwise set to 0
 '''
 def buildExaggerationDataset(one_batch_data):
     counter=-1
-    labels=np.zeros(one_batch_data[1].shape)
+    labels=np.zeros_like(one_batch_data[1])
     for text_batch in one_batch_data:
         for text in text_batch:
             counter+=1
