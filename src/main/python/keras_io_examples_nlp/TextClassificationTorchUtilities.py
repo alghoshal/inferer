@@ -120,6 +120,7 @@ def loadVocabFromFile(saveVocabPath):
     with open(saveVocabPath, 'rb') as f:
         vocab=pickle.load(f)
         vocabLength=len(vocab)
+    vocabLength=len(vocab)
     return vocab
 
 def buildModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
