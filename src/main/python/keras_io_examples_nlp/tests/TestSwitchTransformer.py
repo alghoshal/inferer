@@ -52,9 +52,9 @@ def testRouter():
 
 def testSwitch():
     global num_tokens_per_batch, num_tokens_per_example
-    num_tokens_per_batch=batch_size * num_tokens_per_example
     tokenPosnEmbeded = callTokenPosnEmbedding()
-    
+    num_tokens_per_batch=batch_size*num_tokens_per_example
+
     # Switch
     switch = Switch(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
     outputSwitch = switch.call(tokenPosnEmbeded)
@@ -62,8 +62,10 @@ def testSwitch():
     
     # Simple Switch
     simpleSwitchRoute = SimpleSwitchRoute(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
+    simpleSwitchRoute.gate = switch.router.route # Reuse gate
     outputSimpleSwitch = simpleSwitchRoute.call(tokenPosnEmbeded)
     assert outputSimpleSwitch.shape ==(batch_size, num_tokens_per_example, embed_dim)
-   # assert np.all(outputSimpleSwitch.eq(outputSwitch).tolist())
+    
+    assert np.all(ops.nonzero(outputSwitch).eq(ops.nonzero(outputSimpleSwitch)).tolist())
 
 testSwitch()

@@ -141,7 +141,6 @@ class Router(layers.Layer):
         self.num_experts = num_experts
         self.route = layers.Dense(num_experts)
         self.expert_capacity = expert_capacity
-        #super().__init__()
 
     def call(self, inputs, training=False):
         # inputs shape: [tokens_per_batch, embed_dim]
@@ -162,15 +161,17 @@ class Router(layers.Layer):
 
         # expert_mask shape: [tokens_per_batch, num_experts]
         expert_mask = ops.one_hot(expert_index, self.num_experts)
+
         # Compute load balancing loss.
-        
         aux_loss = load_balanced_loss(router_probs, expert_mask)
         self.add_loss(aux_loss)
+        
         # Experts have a fixed capacity, ensure we do not exceed it. Construct
         # the batch indices, to each expert, with position in expert make sure that
         # not more that expert capacity examples can be routed to each expert.
+        expert_mask_cumsum=ops.cumsum(expert_mask, axis=0)
         position_in_expert = ops.cast(
-            ops.cumsum(expert_mask, axis=0) * expert_mask, "int32"
+             expert_mask_cumsum * expert_mask, "int32"
         )
         # Keep only tokens that fit within expert capacity.
         expert_mask *= ops.cast(
@@ -251,7 +252,9 @@ class Switch(layers.Layer):
         )
         return outputs
 
-
+'''
+Simple Switch/ MoE
+'''
 class SimpleSwitchRoute(layers.Layer):
     def __init__(
         self, num_experts, embed_dim, ff_dim, num_tokens_per_batch, capacity_factor=1
@@ -276,20 +279,22 @@ class SimpleSwitchRoute(layers.Layer):
                 shape=gateLogits.shape, minval=0.9, maxval=1.1
             )
             
-        weights, selectedExperts = ops.top_k(gateLogits, k=1)            
+        weights, selectedExperts = ops.top_k(gateLogits, k=1)    
+        
         weights = keras.activations.softmax(weights, axis=-1)
 
         # Aux Loss
-        auxLoss = ops.mean(ops.mean(weights, axis=0) * ops.mean(selectedExperts, 
-            axis=0)) * ops.cast((num_experts ** 2), "float32")
-        
+        auxLoss = ops.mean(ops.mean(weights, axis=0) * ops.mean(selectedExperts, axis=0))
         self.add_loss(auxLoss)
-        
-        outputs = ops.zeros_like(inputs)
-        
 
+        outputs = ops.zeros_like(inputs)
         for i, expert in enumerate(self.experts):
             batchId, tokenId, topKExperts = ops.where(selectedExperts==i)
+            if(len(tokenId)>self.expert_capacity):
+                # Drop tokens exceeding capacity
+                batchId=batchId[:self.expert_capacity]
+                tokenId=tokenId[:self.expert_capacity]
+                topKExperts=topKExperts[:self.expert_capacity]
             weight = weights[batchId,tokenId,topKExperts, None]
             outputs[batchId,tokenId]+=weight*expert(inputs[batchId,tokenId])
 
@@ -330,8 +335,9 @@ of it to classify text.
 """
 
 
-def create_classifier():
-    switch = Switch(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
+def create_classifier(useSimpleSwitch=False):
+    if useSimpleSwitch: switch = SimpleSwitchRoute(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
+    else: switch = Switch(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
     transformer_block = TransformerBlock(embed_dim // num_heads, num_heads, switch)
 
     inputs = layers.Input(shape=(num_tokens_per_example,))
