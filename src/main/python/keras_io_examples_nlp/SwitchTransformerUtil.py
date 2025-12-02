@@ -61,7 +61,7 @@ def fetchN(data, N=-1):
 embed_dim = 32  # Embedding size for each token.
 num_heads = 2  # Number of attention heads
 ff_dim = 16  # Hidden layer size in feedforward network.
-num_experts = 2  # Number of experts used in the Switch Transformer.
+num_experts = 3  # Number of experts used in the Switch Transformer.
 batch_size = 5  # Batch size.
 learning_rate = 0.001  # Learning rate.
 dropout_rate = 0.25  # Dropout rate.
@@ -163,6 +163,7 @@ class Router(layers.Layer):
         # expert_mask shape: [tokens_per_batch, num_experts]
         expert_mask = ops.one_hot(expert_index, self.num_experts)
         # Compute load balancing loss.
+        
         aux_loss = load_balanced_loss(router_probs, expert_mask)
         self.add_loss(aux_loss)
         # Experts have a fixed capacity, ensure we do not exceed it. Construct
@@ -250,6 +251,49 @@ class Switch(layers.Layer):
         )
         return outputs
 
+
+class SimpleSwitchRoute(layers.Layer):
+    def __init__(
+        self, num_experts, embed_dim, ff_dim, num_tokens_per_batch, capacity_factor=1
+    ):
+        super().__init__()
+        self.num_experts = num_experts
+        self.embed_dim = embed_dim
+        self.experts = [
+            create_feedforward_network(ff_dim, embed_dim) for _ in range(num_experts)
+        ]
+
+        self.expert_capacity = num_tokens_per_batch // self.num_experts
+        self.gate = layers.Dense(num_experts)
+
+    def call(self, inputs, training=False):
+        inputs = ops.squeeze(inputs,2)
+        gateLogits = self.gate(inputs)
+        
+        if training:
+            # Add noise for exploration across experts.
+            gateLogits += keras.random.uniform(
+                shape=gateLogits.shape, minval=0.9, maxval=1.1
+            )
+            
+        weights, selectedExperts = ops.top_k(gateLogits, k=1)            
+        weights = keras.activations.softmax(weights, axis=-1)
+
+        # Aux Loss
+        auxLoss = ops.mean(ops.mean(weights, axis=0) * ops.mean(selectedExperts, 
+            axis=0)) * ops.cast((num_experts ** 2), "float32")
+        
+        self.add_loss(auxLoss)
+        
+        outputs = ops.zeros_like(inputs)
+        
+
+        for i, expert in enumerate(self.experts):
+            batchId, tokenId, topKExperts = ops.where(selectedExperts==i)
+            weight = weights[batchId,tokenId,topKExperts, None]
+            outputs[batchId,tokenId]+=weight*expert(inputs[batchId,tokenId])
+
+        return outputs
 
 """
 ## Implement a Transformer block layer
