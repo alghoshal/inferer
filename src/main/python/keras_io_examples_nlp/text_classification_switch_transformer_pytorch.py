@@ -58,5 +58,5 @@ x_val = keras.utils.pad_sequences(x_val, maxlen=num_tokens_per_example)
 print(f"Number of tokens per batch: {num_tokens_per_batch}")
 
 
-classifier = create_classifier()
+classifier = create_classifier(useSimpleSwitch=True)
 run_experiment(classifier, x_train, y_train, x_val, y_val)

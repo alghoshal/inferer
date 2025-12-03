@@ -33,6 +33,7 @@ model for demonstration purposes.
 
 import keras
 import os
+import random
 from keras import ops
 from keras import layers
 import numpy as np
@@ -69,7 +70,7 @@ num_epochs = 3  # Number of epochs.
 num_tokens_per_batch = (
     batch_size * num_tokens_per_example
 )  # Total number of tokens per batch.
-
+expertsPerExample=1
 """
 ## Implement token & position embedding layer
 
@@ -279,7 +280,7 @@ class SimpleSwitchRoute(layers.Layer):
                 shape=gateLogits.shape, minval=0.9, maxval=1.1
             )
             
-        weights, selectedExperts = ops.top_k(gateLogits, k=1)    
+        weights, selectedExperts = ops.top_k(gateLogits, k=expertsPerExample)    
         
         weights = keras.activations.softmax(weights, axis=-1)
 
@@ -290,11 +291,15 @@ class SimpleSwitchRoute(layers.Layer):
         outputs = ops.zeros_like(inputs)
         for i, expert in enumerate(self.experts):
             batchId, tokenId, topKExperts = ops.where(selectedExperts==i)
-            if(len(tokenId)>self.expert_capacity):
-                # Drop tokens exceeding capacity
-                batchId=batchId[:self.expert_capacity]
-                tokenId=tokenId[:self.expert_capacity]
-                topKExperts=topKExperts[:self.expert_capacity]
+            tokensLength=len(tokenId)
+            if(tokensLength>self.expert_capacity):
+                # Drop tokens exceeding capacity, pick start index randomly
+                start=random.randint(0,tokensLength-self.expert_capacity)
+                end=start+self.expert_capacity
+                
+                batchId=batchId[start:end]
+                tokenId=tokenId[start:end]
+                topKExperts=topKExperts[start:end]
             weight = weights[batchId,tokenId,topKExperts, None]
             outputs[batchId,tokenId]+=weight*expert(inputs[batchId,tokenId])
 
