@@ -10,9 +10,12 @@ import pandas as pd
 import os
 from evidently.metrics import DriftedColumnsCount
 from evidently.metrics import ValueDrift
+from evidently import Dataset, DataDefinition
 from evidently import Report
 from evidently.generators import ColumnMetricGenerator
 from evidently.metrics import UniqueValueCount
+from evidently.descriptors import TextLength,WordCount
+from evidently.presets import TextEvals
 import csv
 from TextClassificationTorchUtilities import *
 from keras.utils import text_dataset_from_directory
@@ -27,13 +30,15 @@ os.environ["KERAS_BACKEND"] = "torch"
 def getRefData():
     reference=pd.read_csv("datasets/code_review.csv")
     refSentiments = reference.filter(items=["Expert label"]).map(lambda x: 0 if x=="bad" else 1)
-    return reference.filter(items=["Generated review"]).join(refSentiments)
+    reference = reference.filter(items=["Generated review"]).join(refSentiments)
+    reference.rename(columns={"Generated review":"Review","Expert label": "Label"}, inplace=True)
+    return reference
    
 def getCurrData():
     imdbReviewsRaw = text_dataset_from_directory(IMDB_TEN_FILES_DIR+"/train", batch_size=50, 
                 validation_split=None, seed=1337, subset=None, format="grain")
     imdbReviews = next(iter(imdbReviewsRaw))
-    return pd.DataFrame({"Generated review":imdbReviews[0],"Expert label":imdbReviews[1]})
+    return pd.DataFrame({"Review":imdbReviews[0],"Label":imdbReviews[1]})
 
 def getRefExpertSentiments(reference):
     loadVocabFromFile(SAVE_TO_DIR+"TextClassificationVocab.pkl")
@@ -42,25 +47,40 @@ def getRefExpertSentiments(reference):
     vectorzd_text_batch,labelsVectorized = vectorize_text((refExpertComments,[]))
     evalRes = model(vectorzd_text_batch)
     return evalRes
+
+def runSaveReport(driftReport, current, reference, filePath):
+    snapshot = driftReport.run(current, reference)
+    snapshot.save_html(filePath)
     
+def buildDatasetWithDescriptors(df):
+    dataset = Dataset.from_pandas(
+        df
+    )
+    dataset.add_descriptors(descriptors=[
+        TextLength("Review", alias="LengthReview"),
+        WordCount("Review", alias="WordCountReview")
+    ])
+    return dataset
+
 def generateDriftReport(reference, current):
-    drift_report = Report([
-        DriftedColumnsCount(cat_stattest="psi", num_stattest="wasserstein", per_column_method={"Expert label":"psi"}, drift_share=0.8),
-        ValueDrift(column="Generated review", method="perc_text_content_drift"),
-        ValueDrift(column="Generated review", method="abs_text_content_drift")],
-        ValueDrift(column="Expert label", method="psi", threshold=0.05),     
-        ValueDrift(column="Expert label", method="chisquare"),          
-        include_tests=False)
-    drift_snapshot = drift_report.run(current, reference)
-    drift_snapshot.save_html(SAVE_TO_DIR_EVIDENTLY+"/driftSnapshotTextReviews.html")
+    reference = buildDatasetWithDescriptors(reference)
+    current = buildDatasetWithDescriptors(current)
+    runSaveReport(Report([
+        TextEvals(),
+        ValueDrift(column="LengthReview", method="psi", threshold=0.05),     
+        ValueDrift(column="WordCountReview", method="kl_div"),
+        DriftedColumnsCount(cat_stattest="psi", num_stattest="wasserstein", per_column_method={"Label":"psi"}, drift_share=0.5),
+        ValueDrift(column="Review", method="perc_text_content_drift"),
+        ValueDrift(column="Review", method="abs_text_content_drift"),
+        ValueDrift(column="Label", method="psi", threshold=0.05),     
+        ValueDrift(column="Label", method="chisquare"),
+        ],
+        include_tests=False), current, reference, filePath=SAVE_TO_DIR_EVIDENTLY+"/driftSnapshotTextReviews.html")
     
-    generator_drift_report = Report([
-        ColumnMetricGenerator(ValueDrift, columns=["Generated review"],metric_kwargs={"method":"perc_text_content_drift"}),
+    runSaveReport(Report([
         ColumnMetricGenerator(ValueDrift),         
-        ColumnMetricGenerator(UniqueValueCount, column_types="cat"),])
-    
-    generator_drift_snapshot = generator_drift_report.run(current, reference)
-    generator_drift_snapshot.save_html(SAVE_TO_DIR_EVIDENTLY+"/genDriftSnapshotTextReviews.html")
+        ColumnMetricGenerator(UniqueValueCount, column_types="cat"),]), 
+        current, reference, filePath=SAVE_TO_DIR_EVIDENTLY+"/genDriftSnapshotTextReviews.html")
  
 
 reference = getRefData()
