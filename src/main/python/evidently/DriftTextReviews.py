@@ -1,7 +1,7 @@
 '''
 Using Evidently, identify Drift between review text and sentiment labels from two very distinct datasets:
-- Movies review (Imdb)
-- Code review  
+- Movies review (Imdb): https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz
+- Code review: https://github.com/evidentlyai/evidently/blob/main/examples/datasets/code_review.csv
 
 @author algo
 '''
