@@ -31,25 +31,26 @@ model for demonstration purposes.
 ## Setup
 """
 
-import keras
-import os
-import random
-from keras import ops
-from keras import layers
-import numpy as np
 
 """
 ## Download and prepare dataset
 """
 
-os.nice(10) # Be nice!
+import numpy as np
+from keras import layers
+from keras import ops
+import random
+import os
+import keras  #
+os.nice(10)  # Be nice!
 os.environ["KERAS_BACKEND"] = "torch"
 vocab_size = 50  # Only consider the top 20k words
 num_tokens_per_example = 200  # Only consider the first 200 words of each movie review
-samplesCount=10
+samplesCount = 10
+
 
 def fetchN(data, N=-1):
-    if(N>0):
+    if(N > 0):
         (x_train, y_train), (x_val, y_val) = data
         return (x_train[:N], y_train[:N]), (x_val[:N], y_val[:N])
     return data
@@ -70,7 +71,7 @@ num_epochs = 3  # Number of epochs.
 num_tokens_per_batch = (
     batch_size * num_tokens_per_example
 )  # Total number of tokens per batch.
-expertsPerExample=1
+expertsPerExample = 1
 """
 ## Implement token & position embedding layer
 
@@ -81,7 +82,8 @@ It consists of two separate embedding layers, one for tokens, one for token inde
 class TokenAndPositionEmbedding(layers.Layer):
     def __init__(self, maxlen, vocab_size, embed_dim):
         super().__init__()
-        self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim)
+        self.token_emb = layers.Embedding(
+            input_dim=vocab_size, output_dim=embed_dim)
         self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim)
 
     def call(self, x):
@@ -127,7 +129,8 @@ def load_balanced_loss(router_probs, expert_mask):
     # Want both vectors to have uniform allocation (1/num experts) across all
     # num_expert elements. The two vectors will be pushed towards uniform allocation
     # when the dot product is minimized.
-    loss = ops.mean(density_proxy * density) * ops.cast((num_experts**2), "float32")
+    loss = ops.mean(density_proxy * density) * \
+        ops.cast((num_experts**2), "float32")
     return loss
 
 
@@ -166,17 +169,18 @@ class Router(layers.Layer):
         # Compute load balancing loss.
         aux_loss = load_balanced_loss(router_probs, expert_mask)
         self.add_loss(aux_loss)
-        
+
         # Experts have a fixed capacity, ensure we do not exceed it. Construct
         # the batch indices, to each expert, with position in expert make sure that
         # not more that expert capacity examples can be routed to each expert.
-        expert_mask_cumsum=ops.cumsum(expert_mask, axis=0)
+        expert_mask_cumsum = ops.cumsum(expert_mask, axis=0)
         position_in_expert = ops.cast(
-             expert_mask_cumsum * expert_mask, "int32"
+            expert_mask_cumsum * expert_mask, "int32"
         )
         # Keep only tokens that fit within expert capacity.
         expert_mask *= ops.cast(
-            ops.less(ops.cast(position_in_expert, "int32"), self.expert_capacity),
+            ops.less(ops.cast(position_in_expert, "int32"),
+                     self.expert_capacity),
             "float32",
         )
         # position_in_expert recomputed with updated expert_mask
@@ -223,16 +227,18 @@ class Switch(layers.Layer):
     def call(self, inputs):
         batch_size = ops.shape(inputs)[0]
         num_tokens_per_example = ops.shape(inputs)[1]
-        
+
         # inputs shape: [num_tokens_per_batch, embed_dim]
-        inputs = ops.reshape(inputs, [batch_size * num_tokens_per_example, self.embed_dim])
+        inputs = ops.reshape(
+            inputs, [batch_size * num_tokens_per_example, self.embed_dim])
         # dispatch_tensor shape: [expert_capacity, num_experts, tokens_per_batch]
         # combine_tensor shape: [tokens_per_batch, num_experts, expert_capacity]
         dispatch_tensor, combine_tensor = self.router(inputs)
         # expert_inputs shape: [num_experts, expert_capacity, embed_dim]
         expert_inputs = ops.einsum("ab,acd->cdb", inputs, dispatch_tensor)
         expert_inputs = ops.reshape(
-            expert_inputs, [self.num_experts, self.expert_capacity, self.embed_dim]
+            expert_inputs, [self.num_experts,
+                            self.expert_capacity, self.embed_dim]
         )
         # Dispatch to experts
         expert_input_list = ops.unstack(expert_inputs, axis=0)
@@ -253,9 +259,12 @@ class Switch(layers.Layer):
         )
         return outputs
 
+
 '''
 Simple Switch/ MoE
 '''
+
+
 class SimpleSwitchRoute(layers.Layer):
     def __init__(
         self, num_experts, embed_dim, ff_dim, num_tokens_per_batch, capacity_factor=1
@@ -271,39 +280,42 @@ class SimpleSwitchRoute(layers.Layer):
         self.gate = layers.Dense(num_experts)
 
     def call(self, inputs, training=False):
-        inputs = ops.squeeze(inputs,2)
+        inputs = ops.squeeze(inputs, 2)
         gateLogits = self.gate(inputs)
-        
+
         if training:
             # Add noise for exploration across experts.
             gateLogits += keras.random.uniform(
                 shape=gateLogits.shape, minval=0.9, maxval=1.1
             )
-            
-        weights, selectedExperts = ops.top_k(gateLogits, k=expertsPerExample)    
-        
+
+        weights, selectedExperts = ops.top_k(gateLogits, k=expertsPerExample)
+
         weights = keras.activations.softmax(weights, axis=-1)
 
         # Aux Loss
-        auxLoss = ops.mean(ops.mean(weights, axis=0) * ops.mean(selectedExperts, axis=0))
+        auxLoss = ops.mean(ops.mean(weights, axis=0) *
+                           ops.mean(selectedExperts, axis=0))
         self.add_loss(auxLoss)
 
         outputs = ops.zeros_like(inputs)
         for i, expert in enumerate(self.experts):
-            batchId, tokenId, topKExperts = ops.where(selectedExperts==i)
-            tokensLength=len(tokenId)
-            if(tokensLength>self.expert_capacity):
+            batchId, tokenId, topKExperts = ops.where(selectedExperts == i)
+            tokensLength = len(tokenId)
+            if(tokensLength > self.expert_capacity):
                 # Drop tokens exceeding capacity, pick start index randomly
-                start=random.randint(0,tokensLength-self.expert_capacity)
-                end=start+self.expert_capacity
-                
-                batchId=batchId[start:end]
-                tokenId=tokenId[start:end]
-                topKExperts=topKExperts[start:end]
-            weight = weights[batchId,tokenId,topKExperts, None]
-            outputs[batchId,tokenId]+=weight*expert(inputs[batchId,tokenId])
+                start = random.randint(0, tokensLength-self.expert_capacity)
+                end = start+self.expert_capacity
+
+                batchId = batchId[start:end]
+                tokenId = tokenId[start:end]
+                topKExperts = topKExperts[start:end]
+            weight = weights[batchId, tokenId, topKExperts, None]
+            outputs[batchId, tokenId] += weight * \
+                expert(inputs[batchId, tokenId])
 
         return outputs
+
 
 """
 ## Implement a Transformer block layer
@@ -313,7 +325,8 @@ class SimpleSwitchRoute(layers.Layer):
 class TransformerBlock(layers.Layer):
     def __init__(self, embed_dim, num_heads, ffn, dropout_rate=0.1):
         super().__init__()
-        self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
+        self.att = layers.MultiHeadAttention(
+            num_heads=num_heads, key_dim=embed_dim)
         # The ffn can be either a standard feedforward network or a switch
         # layer with a Mixture of Experts.
         self.ffn = ffn
@@ -341,9 +354,13 @@ of it to classify text.
 
 
 def create_classifier(useSimpleSwitch=False):
-    if useSimpleSwitch: switch = SimpleSwitchRoute(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
-    else: switch = Switch(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
-    transformer_block = TransformerBlock(embed_dim // num_heads, num_heads, switch)
+    if useSimpleSwitch:
+        switch = SimpleSwitchRoute(
+            num_experts, embed_dim, ff_dim, num_tokens_per_batch)
+    else:
+        switch = Switch(num_experts, embed_dim, ff_dim, num_tokens_per_batch)
+    transformer_block = TransformerBlock(
+        embed_dim // num_heads, num_heads, switch)
 
     inputs = layers.Input(shape=(num_tokens_per_example,))
     embedding_layer = TokenAndPositionEmbedding(
@@ -372,7 +389,7 @@ def run_experiment(classifier, x_train, y_train, x_val, y_val):
         loss="sparse_categorical_crossentropy",
         metrics=["accuracy"],
     )
-    
+
     history = classifier.fit(
         x_train,
         y_train,
@@ -381,4 +398,3 @@ def run_experiment(classifier, x_train, y_train, x_val, y_val):
         validation_data=(x_val, y_val),
     )
     return history
-

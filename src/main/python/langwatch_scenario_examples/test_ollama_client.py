@@ -3,7 +3,7 @@ import pytest
 import scenario
 from openai import OpenAI
 
-OLLAMA_MODEL = "gemma3:1b" #"llama3.2:1b"
+OLLAMA_MODEL = "gemma3:1b"  # "llama3.2:1b"
 CUSTOM_LLM_PROVIDER = "ollama"
 
 
@@ -17,7 +17,7 @@ def ollama_client():
     Returns:
         OpenAI: Ollama client
     """
-    base_url = os.getenv("OLLAMA_API_BASE","http://localhost:11434/")
+    base_url = os.getenv("OLLAMA_API_BASE", "http://localhost:11434/")
     print(f"base_url: {base_url}")
 
     return OpenAI(base_url=base_url)
@@ -38,13 +38,14 @@ async def test_ollama_client():
         description="User asks a simple question about the weather",
         agents=[
             MockAgent(),
-            scenario.UserSimulatorAgent(model=OLLAMA_MODEL, client=custom_client, custom_llm_provider=CUSTOM_LLM_PROVIDER),
+            scenario.UserSimulatorAgent(
+                model=OLLAMA_MODEL, client=custom_client, custom_llm_provider=CUSTOM_LLM_PROVIDER),
             scenario.JudgeAgent(model=OLLAMA_MODEL, client=custom_client, custom_llm_provider=CUSTOM_LLM_PROVIDER,
-                criteria=[
-                    "The agent responds to the user's message",
-                    "The agent offers to help if they don't know the answer",
-                ],
-            ),
+                                criteria=[
+                                    "The agent responds to the user's message",
+                                    "The agent offers to help if they don't know the answer",
+                                ],
+                                ),
         ],
         script=[scenario.user(), scenario.agent(), scenario.judge()],
         set_id="ollama-tests",  # Test grouping

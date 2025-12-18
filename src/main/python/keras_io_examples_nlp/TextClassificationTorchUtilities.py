@@ -27,16 +27,16 @@ Imdb data source: https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.g
 """
 ## Setup
 """
-os.nice(10) # Be nice!
+os.nice(10)  # Be nice!
 os.environ["KERAS_BACKEND"] = "torch"
-USER_HOME=os.path.expanduser("~")
-SAVE_TO_DIR=USER_HOME+"/Tools/models/saved/TextClassificationTorch/"
+USER_HOME = os.path.expanduser("~")
+SAVE_TO_DIR = USER_HOME+"/Tools/models/saved/TextClassificationTorch/"
 showSampleData = False
 
 SPECIAL_TOKEN_UNK = "<unk>"
-SPECIAL_TOKEN_PAD= "<pad>"
-SPECIAL_TOKENS =[SPECIAL_TOKEN_UNK,SPECIAL_TOKEN_PAD]
-SPECIAL_TOKEN_UNK_INDEX =0
+SPECIAL_TOKEN_PAD = "<pad>"
+SPECIAL_TOKENS = [SPECIAL_TOKEN_UNK, SPECIAL_TOKEN_PAD]
+SPECIAL_TOKEN_UNK_INDEX = 0
 
 max_features_incl_sp_tokens = 5000
 batch_size = 32
@@ -46,38 +46,44 @@ epochs = 3
 
 # Actual max_features without special tokens = max tokens read from input files
 max_features = max_features_incl_sp_tokens-len(SPECIAL_TOKENS)
-imdb_files_dir="aclImdb"
+imdb_files_dir = "aclImdb"
 
 tokenizer = get_tokenizer('basic_english')
 
-vocab=None
-vocabLength=-1
+vocab = None
+vocabLength = -1
 
-exaggerations="highly|extremely|superb|superlative|mind-blowing|tremendous|terrific|surreal|fantastic|unforgettable|astounding|spellbound|remarkable|greatest|smartest|bestest"
+exaggerations = "highly|extremely|superb|superlative|mind-blowing|tremendous|terrific|surreal|fantastic|unforgettable|astounding|spellbound|remarkable|greatest|smartest|bestest"
 
 
 '''
 Receives tuple consisting one batch (of 32).
 Expects the global vocab to be pre-populated before being called
 '''
+
+
 def vectorize_text(one_batch_data):
     global vocab, vocabLength
-    assert vocab is not None and vocabLength >0
-    vectorzd_text_batch=[]    
+    assert vocab is not None and vocabLength > 0
+    vectorzd_text_batch = []
     for text_batch in one_batch_data:
         for text in text_batch:
             textval = text
-            if(type(text)==np.str_):
+            if(type(text) == np.str_):
                 textval = text.item()
-            if(type(textval)==str):
-                vectorzd_text = [vocab[token] for token in tokenizer(custom_standardization(textval))] 
-                vectorzd_text.extend([SPECIAL_TOKEN_UNK_INDEX]*(vocabLength - len(vectorzd_text)))
+            if(type(textval) == str):
+                vectorzd_text = [vocab[token] for token in tokenizer(
+                    custom_standardization(textval))]
+                vectorzd_text.extend(
+                    [SPECIAL_TOKEN_UNK_INDEX]*(vocabLength - len(vectorzd_text)))
                 vectorzd_text_batch.append(vectorzd_text)
-                
-    if len(vectorzd_text_batch)==0: vectorzd_text_batch.append([SPECIAL_TOKEN_UNK_INDEX]*vocabLength)
-    vectorzd_text_batch=np.array(vectorzd_text_batch)
-    vectorzd_text_batch= np.expand_dims(vectorzd_text_batch, -1)
-    return [vectorzd_text_batch,one_batch_data[1]]
+
+    if len(vectorzd_text_batch) == 0:
+        vectorzd_text_batch.append([SPECIAL_TOKEN_UNK_INDEX]*vocabLength)
+    vectorzd_text_batch = np.array(vectorzd_text_batch)
+    vectorzd_text_batch = np.expand_dims(vectorzd_text_batch, -1)
+    return [vectorzd_text_batch, one_batch_data[1]]
+
 
 def printSampleData(raw_data):
     for text_batch, label_batch in raw_data:
@@ -85,10 +91,12 @@ def printSampleData(raw_data):
             print(f"T{i} "+text_batch[i])
             print(f"B{i} "+str(label_batch[i]))
         break
-    
+
+
 def custom_standardization(inputText):
     outputText = inputText.lower().replace("<br />", " ")
     return re.sub(f'[{string.punctuation}]', "", outputText)
+
 
 def getTokens(raw_data):
     tokens_train = []
@@ -97,98 +105,117 @@ def getTokens(raw_data):
             tokens_train.append(tokenizer(custom_standardization(text)))
     return tokens_train
 
+
 def buildVocab(tokens_train, saveVocabPath=None):
     global vocab, vocabLength
     counter = Counter()
-    for token in tokens_train: counter.update(token)
+    for token in tokens_train:
+        counter.update(token)
     vocab = Vocab(counter, max_size=max_features-2)
-    vocabLength=len(vocab)
+    vocabLength = len(vocab)
     print("Vocab length: "+str(vocabLength))
-    assert vocab[tokenizer(SPECIAL_TOKEN_UNK)[0]]==SPECIAL_TOKEN_UNK_INDEX # Validate UNK token used for Padding
+    # Validate UNK token used for Padding
+    assert vocab[tokenizer(SPECIAL_TOKEN_UNK)[0]] == SPECIAL_TOKEN_UNK_INDEX
     if saveVocabPath is not None:
         with open(saveVocabPath, "wb") as f:
             pickle.dump(vocab, f)
     return vocab
 
+
 def buildVocabFromRawData(raw_data, rebuild=False, saveVocabPath=None):
     if vocab is not None and not rebuild:
         return vocab
-    return buildVocab(getTokens(raw_data),saveVocabPath)
+    return buildVocab(getTokens(raw_data), saveVocabPath)
+
 
 def loadVocabFromFile(saveVocabPath):
     global vocab, vocabLength
     with open(saveVocabPath, 'rb') as f:
-        vocab=pickle.load(f)
-        vocabLength=len(vocab)
-    vocabLength=len(vocab)
+        vocab = pickle.load(f)
+        vocabLength = len(vocab)
+    vocabLength = len(vocab)
     return vocab
 
-def buildModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
+
+def buildModel(train_ds, val_ds, test_ds, max_features=max_features, embedding_dim=128, epochs=3):
     # A integer input for vocab indices.
     inputs = keras.Input(shape=(None,), dtype="int64")
-    
+
     # Next, we add a layer to map those vocab indices into a space of dimensionality
     # 'embedding_dim'.
     x = layers.Embedding(max_features, embedding_dim)(inputs)
     x = layers.Dropout(0.5)(x)
-    
+
     # Conv1D + global max pooling
     x = layers.Conv1D(128, 7, padding="valid", activation="relu", strides=3)(x)
     x = layers.Conv1D(128, 7, padding="valid", activation="relu", strides=3)(x)
     x = layers.GlobalMaxPooling1D()(x)
-    
+
     # We add a vanilla hidden layer:
     x = layers.Dense(128, activation="relu")(x)
     x = layers.Dropout(0.5)(x)
-    
+
     # We project onto a single unit output layer, and squash it with a sigmoid:
     predictions = layers.Dense(1, activation="sigmoid", name="predictions")(x)
-    
+
     model = keras.Model(inputs, predictions)
-    
+
     return model
 
-def buildCompileModel(train_ds,val_ds,test_ds, max_features=max_features, embedding_dim=128, epochs=3):
-    model = buildModel(train_ds, val_ds, test_ds, max_features, embedding_dim, epochs)
+
+def buildCompileModel(train_ds, val_ds, test_ds, max_features=max_features, embedding_dim=128, epochs=3):
+    model = buildModel(train_ds, val_ds, test_ds,
+                       max_features, embedding_dim, epochs)
     # Compile the model with binary crossentropy loss and an adam optimizer.
-    model.compile(loss=keras.losses.BinaryCrossentropy(from_logits=False), optimizer=keras.optimizers.Adam(), metrics=[keras.metrics.BinaryAccuracy()])
+    model.compile(loss=keras.losses.BinaryCrossentropy(from_logits=False),
+                  optimizer=keras.optimizers.Adam(), metrics=[keras.metrics.BinaryAccuracy()])
     return model
+
 
 '''
 True if the layer is Trainable, with valid weights.
 Layers like Dropout, Pooling, etc without weights aren't Trainable
 '''
+
+
 def trainable(layer):
     return hasattr(layer, "weights") and len(layer.weights) > 0
+
 
 '''
 Recursively set enable_lora(rank=rank) on all/ specified layers
 '''
-def enableLora(layer,layerNames=None,rank=4):
+
+
+def enableLora(layer, layerNames=None, rank=4):
     if hasattr(layer, "layers"):
         for layer in layer.layers:
-            enableLora(layer,layerNames,rank)
+            enableLora(layer, layerNames, rank)
     else:
-        if(trainable(layer) and (layerNames is None or layerNames.__contains__(layer.name))): 
+        if(trainable(layer) and (layerNames is None or layerNames.__contains__(layer.name))):
             print("Enable lora for: "+layer.name)
             layer.enable_lora(rank)
-        else: layer.trainable=False
+        else:
+            layer.trainable = False
+
 
 '''
 Builds a dataset where the labels are set to 1 if the text contains any exaggeration words
 otherwise set to 0
 '''
+
+
 def buildExaggerationDataset(one_batch_data):
-    counter=-1
-    labels=np.zeros_like(one_batch_data[1])
+    counter = -1
+    labels = np.zeros_like(one_batch_data[1])
     for text_batch in one_batch_data:
         for text in text_batch:
-            counter+=1
+            counter += 1
             textval = text
-            if(type(text)==np.str_):
+            if(type(text) == np.str_):
                 textval = text.item()
-            if(type(textval)==str):
-                matches=re.findall(exaggerations,textval)
-                if len(matches)>0: # has exaggerations
-                    labels[counter]=1
-    return [one_batch_data[0],labels]
+            if(type(textval) == str):
+                matches = re.findall(exaggerations, textval)
+                if len(matches) > 0:  # has exaggerations
+                    labels[counter] = 1
+    return [one_batch_data[0], labels]

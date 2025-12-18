@@ -35,20 +35,21 @@ model for demonstration purposes.
 ## Setup
 """
 
-import keras
-import os
-from keras import ops
-from keras import layers
-from SwitchTransformerUtil import *
 
 """
 ## Download and prepare dataset
 """
 
-os.nice(10) # Be nice!
+from SwitchTransformerUtil import *
+from keras import layers
+from keras import ops
+import os
+import keras  #
+os.nice(10)  # Be nice!
 os.environ["KERAS_BACKEND"] = "torch"
 
-(x_train, y_train), (x_val, y_val) = fetchN(keras.datasets.imdb.load_data(num_words=vocab_size),N=samplesCount)
+(x_train, y_train), (x_val, y_val) = fetchN(
+    keras.datasets.imdb.load_data(num_words=vocab_size), N=samplesCount)
 
 print(len(x_train), "Training sequences")
 print(len(x_val), "Validation sequences")
