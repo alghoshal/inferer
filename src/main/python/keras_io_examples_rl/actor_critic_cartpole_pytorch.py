@@ -4,6 +4,7 @@ PyTorch port of actor_critic_cartpole_pytorch.py from keras-io
 
 Has no TensorFlow dependence:
 - Uses torch.autograd.grad 
+- Uses gymnasium
 
 ### References
 
