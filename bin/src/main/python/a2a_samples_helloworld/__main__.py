@@ -80,7 +80,7 @@ if __name__ == '__main__':
     )
 
     config = Config()
-    config.bind="127.0.0.1:8080"  # Binds to all interfaces on port 8080
+    config.bind = "127.0.0.1:8080"  # Binds to all interfaces on port 8080
 
     asyncio.run(serve(server.build(), config))
    # uvicorn.run(server.build(), host='127.0.0.1', port=8080, log-level='debug')

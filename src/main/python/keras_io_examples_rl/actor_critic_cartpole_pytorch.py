@@ -1,10 +1,11 @@
 """
-PyTorch port of actor_critic_cartpole_pytorch.py from keras-io
-(@see: https://github.com/keras-team/keras-io/blob/master/examples/rl/actor_critic_cartpole_pytorch.py)
+PyTorch port of actor_critic_cartpole.py from keras-io
+(@see: https://github.com/keras-team/keras-io/blob/master/examples/rl/actor_critic_cartpole.py)
 
 Has no TensorFlow dependence:
 - Uses torch.autograd.grad 
 - Uses gymnasium 
+- Uses torch optimizers
 
 ### References
 
@@ -132,7 +133,7 @@ while True:  # Run until solved
         )
 
     # Backpropagation
-    optimizer.zero_grad()  # Clear previous gradients
+
     loss_value = sum(actor_losses) + sum(critic_losses)
     loss_value.backward()
     optimizer.step()
@@ -141,6 +142,7 @@ while True:  # Run until solved
     action_probs_history.clear()
     critic_value_history.clear()
     rewards_history.clear()
+    optimizer.zero_grad()  # Clear previous gradients    
 
     # Log details
     episode_count += 1
