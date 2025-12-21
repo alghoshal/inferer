@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 
 import torch
 
-# Enabled only for training (train_policy()/ train_value())
+# Enabled only for training (update())
 torch.set_grad_enabled(False)
 
 # Specify the `render_mode` parameter to show the attempts of the agent in a pop up window.

@@ -63,6 +63,8 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 
 num_actions = 4
 
+# Enabled only for training
+torch.set_grad_enabled(False)
 
 def create_q_model():
     # Network defined by the Deepmind paper
