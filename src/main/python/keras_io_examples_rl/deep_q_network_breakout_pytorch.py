@@ -40,7 +40,7 @@ epsilon_interval = (
 )  # Rate at which to reduce chance of random action being taken
 batch_size = 32  # Size of batch taken from replay buffer
 max_steps_per_episode = 10000
-max_episodes = 10  # Limit training episodes, will run until solved if smaller than 1
+max_episodes = 30  # Limit training episodes, will run until solved if smaller than 1
 
 # Use the Atari environment
 gym.register_envs(ale_py)
@@ -113,7 +113,7 @@ running_reward = 0
 episode_count = 0
 frame_count = 0
 # Number of frames to take random action and observe output
-epsilon_random_frames = 50000
+epsilon_random_frames = 1000 # 50000
 # Number of frames for exploration
 epsilon_greedy_frames = 1000000.0
 # Maximum replay length
@@ -122,7 +122,7 @@ max_memory_length = 100000
 # Train the model after 4 actions
 update_after_actions = 4
 # How often to update the target network
-update_target_network = 10000
+update_target_network = 500 # 10000
 # Using huber loss for stability
 loss_function = keras.losses.Huber()
 
@@ -145,7 +145,7 @@ while True:
             state_tensor = keras.ops.expand_dims(state_tensor, 0)
             action_probs = model(state_tensor, training=False)
             # Take best action
-            action = keras.ops.argmax(action_probs[0]).numpy()
+            action = keras.ops.argmax(action_probs[0]).item()
 
         # Decay probability of taking random action
         epsilon -= epsilon_interval / epsilon_greedy_frames
@@ -181,7 +181,7 @@ while True:
 
             # Build the updated Q-values for the sampled future states
             # Use the target model for stability
-            future_rewards = model_target.predict(state_next_sample)
+            future_rewards = model_target.predict(state_next_sample, verbose=0)
             # Q value = reward + discount factor * expected future reward
             updated_q_values = torch.tensor(rewards_sample) + gamma * keras.ops.amax(
                 future_rewards, axis=1
@@ -189,10 +189,10 @@ while True:
 
             # If final frame set the last value to -1
             updated_q_values = updated_q_values * (1 - done_sample) - done_sample
-
+            
             # Create a mask so we only calculate loss on the updated Q-values
-            masks = keras.ops.one_hot(action_sample, num_actions)
-
+            masks = keras.ops.one_hot(torch.tensor(action_sample), num_actions)
+            
             with torch.enable_grad():
                 # Train the model on the states and updated Q-values
                 q_values = model(state_sample)
