@@ -29,10 +29,11 @@ os.environ["KERAS_BACKEND"] = "torch"
 
 
 def getCurrData():
-    reference = pd.read_csv("datasets/code_review.csv")
+    reference = pd.read_csv("datasets/code_review.csv",
+                    usecols=["Generated review","Expert label"])
     reference.rename(
         columns={"Generated review": "Review", "Expert label": "Label"}, inplace=True)    
-    reference = reference.filter(items=["Review","Label"]).assign(
+    reference = reference.assign(
         Label=reference.Label.map(lambda x: 0 if x == "bad" else 1))
 
     return reference
