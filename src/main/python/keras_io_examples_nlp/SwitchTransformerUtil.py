@@ -82,8 +82,7 @@ It consists of two separate embedding layers, one for tokens, one for token inde
 class TokenAndPositionEmbedding(layers.Layer):
     def __init__(self, maxlen, vocab_size, embed_dim):
         super().__init__()
-        self.token_emb = layers.Embedding(
-            input_dim=vocab_size, output_dim=embed_dim)
+        self.token_emb = layers.Embedding(input_dim=vocab_size, output_dim=embed_dim)
         self.pos_emb = layers.Embedding(input_dim=maxlen, output_dim=embed_dim)
 
     def call(self, x):
@@ -311,9 +310,7 @@ class SimpleSwitchRoute(layers.Layer):
                 tokenId = tokenId[start:end]
                 topKExperts = topKExperts[start:end]
             weight = weights[batchId, tokenId, topKExperts, None]
-            outputs[batchId, tokenId] += weight * \
-                expert(inputs[batchId, tokenId])
-
+            outputs[batchId, tokenId] += weight * expert(inputs[batchId, tokenId])
         return outputs
 
 
