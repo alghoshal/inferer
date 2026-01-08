@@ -128,8 +128,7 @@ def load_balanced_loss(router_probs, expert_mask):
     # Want both vectors to have uniform allocation (1/num experts) across all
     # num_expert elements. The two vectors will be pushed towards uniform allocation
     # when the dot product is minimized.
-    loss = ops.mean(density_proxy * density) * \
-        ops.cast((num_experts**2), "float32")
+    loss = ops.mean(density_proxy * density) * ops.cast((num_experts**2), "float32")
     return loss
 
 
